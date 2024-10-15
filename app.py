@@ -13,16 +13,14 @@ def apply_loan():
     data = request.get_json()
     aadhaar = data.get('aadhaar')
     pan = data.get('pan')
-    loan_amount = int(data.get('loanAmount'))
-    loan_term = int(data.get('loanTerm'))
+    loan_amount = data.get('loanAmount')
+    loan_term = data.get('loanTerm')
 
     if not verify_aadhaar_pan(aadhaar, pan):
         return jsonify({"error": "Aadhaar/PAN verification failed"}), 400
 
-    # Loan amount and term validation based on CIBIL (placeholder - assuming good CIBIL for now)
-    if not (10000 <= loan_amount <= 200000):  # Example good CIBIL range
-        return jsonify({"error": "Loan amount must be between 10000 and 200000"}), 400
-
+    # Loan amount and term validation based on CIBIL (placeholder)
+    # ...
 
     # Calculate EMI (Example)
     interest_rate = 0.027  # 2.7% monthly interest
@@ -31,13 +29,13 @@ def apply_loan():
 
     # ... (Database interaction to store application details)
 
-    return jsonify({"emi": emi, "loan_term": loan_term}) #Simplified return
+    return jsonify({"emi": emi, "loan_term": loan_term})
 
 @app.route('/<path:path>')
-def file(path):
-    return send_file('public/'+path)
+def path(path):
+  return send_file(f"public/{path}")
 @app.route('/')
 def root():
-    return send_file('public/index.html')
+  return send_file(f"public/index.html")
 if __name__ == '__main__':
     app.run(debug=True)
