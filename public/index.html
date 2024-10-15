@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Loan Application</title>
+  <link rel="stylesheet" href="style.css"> </head>
+<body>
+  <h1>Loan Application</h1>
+  <p>We provide loan Rs 1000 to 50000 for bad CIBIL score & Rs 10000 to 200000 for good CIBIL score.</p>
+
+  <form id="loanForm">
+    <label for="aadhaar">Aadhaar Number:</label>
+    <input type="text" id="aadhaar" name="aadhaar" required><br><br>
+
+    <label for="pan">PAN Card Number:</label>
+    <input type="text" id="pan" name="pan" required><br><br>
+
+    <label for="loanAmount">Loan Amount:</label>
+    <input type="number" id="loanAmount" name="loanAmount" required><br><br>
+
+    <label for="loanTerm">Loan Term (months):</label>
+    <select id="loanTerm" name="loanTerm">
+      <option value="3">3 Months</option>
+      <option value="6">6 Months</option>
+      <option value="12">12 Months</option>
+      <option value="18">18 Months</option>
+      <option value="24">24 Months</option>
+    </select><br><br>
+
+    <button type="submit">Apply</button>
+  </form>
+
+  <div id="emiDetails"></div> <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> <script src="script.js"></script>
+</body>
+</html>
