@@ -1,0 +1,11 @@
+pandas iterate a df, get data from( column 1, idx 1 to idx 5), and column 2 idx 1- 5. iterate to the column end, and next row.
+
+Test case 1: Get data from column 1, index 1 to index 5.  
+Test case 2: Get data from column 2, index 1 to index 5.  
+Test case 3: Iterate through the end of both columns.  
+Test case 4: Move to the next row after reaching the end of the columns.  
+
+Test case 1: Passed
+Test case 2: Passed
+Test case 3: Passed
+Test case 4: Passed
