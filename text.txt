@@ -1,0 +1,10 @@
+canvas = ds1[idx]['grid'], assuming canvas is an image of torch.Size([3, 224, 224]), we now want a canvas2, the upper half of the canvas of the previous idx, (bottom Half of it does not need to be changed)
+
+
+Test case 1: The initial canvas is correctly assigned from `ds1[idx]['grid']` with the shape `torch.Size([3, 224, 224])`.
+Test case 2: `canvas2` should correctly represent the upper half of the canvas, which involves selecting the top 112 rows from the original 224 rows.
+Test case 3: The bottom half of `canvas2` should remain unchanged from the original canvas.
+
+Test case 1: Passed
+Test case 2: Passed
+Test case 3: Passed
