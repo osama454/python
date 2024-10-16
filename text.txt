@@ -1,5 +1,9 @@
-Test case 1: The script should buy when the fast moving average (MA) crosses above the slow moving average (MA).  
-Test case 2: The script should sell when the fast moving average (MA) crosses below the slow moving average (MA).  
+Test case 1: Write Python code using Triton that works on a 3D grid with dimensions NxNxN, where N is a multiple of 8.  
+Test case 2: Ensure each gridpoint contains a density value.  
+Test case 3: Use the distance `ds` to represent the distance between any two adjacent gridpoints.  
+Test case 4: Compute `gx`, `gy`, and `gz` for every gridpoint, representing the self-gravitating component of the grid.  
 
 Test case 1: Passed
 Test case 2: Passed
+Test case 3: Passed
+Test case 4: Passed

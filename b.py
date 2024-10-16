@@ -1,94 +1,93 @@
-from hummingbot.strategy.strategy_base import StrategyBase
-from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
-from hummingbot.connector.exchange.paper_trade import PaperTradeExchange
-from hummingbot.connector.exchange_base import ExchangeBase
-from hummingbot.core.data_type.common import OrderType
-from hummingbot.core.event.events import OrderFilledEvent
-from hummingbot.core.data_type.order_candidate import OrderCandidate
-from hummingbot.indicator.simple_moving_average import SimpleMovingAverage
+import triton
+import triton.language as tl
 
-# Import the Decimal class for precise decimal calculations
-from decimal import Decimal
+@triton.jit
+def calculate_gravity(
+    density_ptr,
+    gx_ptr,
+    gy_ptr,
+    gz_ptr,
+    N: tl.constexpr,
+    ds: tl.constexpr,
+    G: tl.constexpr,
+):
+    """
+    Calculates the gravitational acceleration at each point in a 3D grid.
 
+    Args:
+        density_ptr: Pointer to the density array.
+        gx_ptr: Pointer to the x-component of the gravitational acceleration array.
+        gy_ptr: Pointer to the y-component of the gravitational acceleration array.
+        gz_ptr: Pointer to the z-component of the gravitational acceleration array.
+        N: The size of the grid (NxNxN).
+        ds: The distance between adjacent grid points.
+        G: The gravitational constant.
+    """
 
-class MaCrossStrategy(StrategyBase):
-    # Define the strategy parameters
-    fast_ma_period: int = 5
-    slow_ma_period: int = 20
-    order_amount: Decimal = Decimal("0.01")
-    trading_pair: str = "ETH-USDT"
-    exchange_name: str = "binance"
+    pid = tl.program_id(axis=0)
+    i = pid // (N * N)
+    j = (pid % (N * N)) // N
+    k = pid % N
 
-    # Initialize the strategy
-    def __init__(self):
-        super().__init__()
-        self.fast_ma = SimpleMovingAverage(self.fast_ma_period)
-        self.slow_ma = SimpleMovingAverage(self.slow_ma_period)
-        self.market_info: MarketTradingPairTuple = MarketTradingPairTuple(
-            self.exchange, self.trading_pair
-        )
-        self.in_position = False
+    # Calculate gravitational acceleration components
+    gx = 0.0
+    gy = 0.0
+    gz = 0.0
+    for ii in range(N):
+        for jj in range(N):
+            for kk in range(N):
+                if (i != ii) or (j != jj) or (k != kk):
+                    dx = (ii - i) * ds
+                    dy = (jj - j) * ds
+                    dz = (kk - k) * ds
+                    r2 = dx * dx + dy * dy + dz * dz
+                    r = tl.math.sqrt(r2)
+                    force = G * density_ptr[ii, jj, kk] / r2
+                    gx += force * dx / r
+                    gy += force * dy / r
+                    gz += force * dz / r
 
-    # Called when the strategy is started
-    def start(self, clock: 'Clock', timestamp: float):
-        super().start(clock, timestamp)
-        print(f"Starting MA Cross strategy with {self.fast_ma_period}/{self.slow_ma_period} MA periods.")
-
-    # Called on each tick (default is 1 second)
-    def tick(self, timestamp: float):
-        # Get the latest price
-        price = self.market_info.get_mid_price()
-
-        # Update the moving averages
-        self.fast_ma.update(price)
-        self.slow_ma.update(price)
-
-        # Check if enough candles have been collected
-        if self.fast_ma.ready() and self.slow_ma.ready():
-            # If not in position and fast MA crosses above slow MA, buy
-            if not self.in_position and self.fast_ma.avg > self.slow_ma.avg:
-                self.buy_order_candidate = OrderCandidate(
-                    trading_pair=self.trading_pair,
-                    is_maker=False,
-                    order_type=OrderType.MARKET,
-                    order_side=TradeType.BUY,
-                    amount=self.order_amount,
-                )
-                self.place_order(self.buy_order_candidate)
-                self.in_position = True
-                print(f"Bought {self.order_amount} {self.trading_pair} at {price}")
-
-            # If in position and fast MA crosses below slow MA, sell
-            elif self.in_position and self.fast_ma.avg < self.slow_ma.avg:
-                self.sell_order_candidate = OrderCandidate(
-                    trading_pair=self.trading_pair,
-                    is_maker=False,
-                    order_type=OrderType.MARKET,
-                    order_side=TradeType.SELL,
-                    amount=self.order_amount,
-                )
-                self.place_order(self.sell_order_candidate)
-                self.in_position = False
-                print(f"Sold {self.order_amount} {self.trading_pair} at {price}")
-
-    # Called when an order is filled
-    def did_fill_order(self, event: OrderFilledEvent):
-        order_id = event.order_id
-        market_info = event.trading_pair
-        order_type = event.trade_type
-        amount = event.amount
-        price = event.price
-
-        # Log the filled order
-        print(f"Order filled: {order_id} - {market_info} - {order_type} - {amount} - {price}")
+    # Store the results
+    gx_ptr[i, j, k] = gx
+    gy_ptr[i, j, k] = gy
+    gz_ptr[i, j, k] = gz
 
 
-# Define the exchange and trading pair
-exchange = PaperTradeExchange(ExchangeBase.PAPER_TRADE_MODE)
-trading_pair = "ETH-USDT"
+def gravity_grid(density, ds, G=6.674e-11):
+    """
+    Calculates the gravitational acceleration on a 3D grid using Triton.
 
-# Create and start the strategy
-strategy = MaCrossStrategy()
-strategy.exchange = exchange
-strategy.trading_pair = trading_pair
-strategy.start(clock=Clock(), timestamp=time.time())
+    Args:
+        density: A NumPy array of shape (N, N, N) representing the density at each grid point.
+        ds: The distance between adjacent grid points.
+        G: The gravitational constant.
+
+    Returns:
+        A tuple of NumPy arrays (gx, gy, gz) representing the gravitational acceleration components.
+    """
+
+    N = density.shape[0]
+    assert N % 8 == 0, "N must be a multiple of 8"
+
+    # Allocate output arrays
+    gx = tl.zeros((N, N, N), dtype=tl.float32)
+    gy = tl.zeros((N, N, N), dtype=tl.float32)
+    gz = tl.zeros((N, N, N), dtype=tl.float32)
+
+    # Launch the kernel
+    grid = (N * N * N,)
+    calculate_gravity[grid](density, gx, gy, gz, N=N, ds=ds, G=G)
+
+    return gx.to_numpy(), gy.to_numpy(), gz.to_numpy()
+  
+import numpy as np
+
+# Generate a random density grid
+N = 64
+density = np.random.rand(N, N, N).astype(np.float32)
+ds = 1.0  # Distance between grid points
+
+# Calculate gravity
+gx, gy, gz = gravity_grid(density, ds)
+
+print(gx.shape, gy.shape, gz.shape)  # Output: (64, 64, 64) (64, 64, 64) (64, 64, 64)

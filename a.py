@@ -1,73 +1,89 @@
-from hummingbot.strategy.strategy_base import StrategyBase
-from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
-from hummingbot.connector.exchange.paper_trade import PaperTradeExchange
-from hummingbot.core.data_type.common import OrderType, TradeType
-from hummingbot.core.event.events import OrderFilledEvent
-from hummingbot.indicator.simple_moving_average import SimpleMovingAverage
+import triton_python_backend_utils as pb_utils
+import numpy as np
 
-# Global variables
-trading_pair = "BTC-USDT"
-exchange = "binance"
-fast_ma_period = 10
-slow_ma_period = 20
+def _get_gx_gy_gz(density, ds):
+    """
+    Computes the gravitational acceleration components (gx, gy, gz) for each gridpoint 
+    in a 3D density grid.
 
-class CrossOverStrategy(StrategyBase):
-    def __init__(self,
-                 market_info: MarketTradingPairTuple,
-                 fast_ma_period: int = fast_ma_period,
-                 slow_ma_period: int = slow_ma_period):
-        super().__init__()
-        self._market_info = market_info
-        self._fast_ma = SimpleMovingAverage(fast_ma_period)
-        self._slow_ma = SimpleMovingAverage(slow_ma_period)
-        self._last_trade_side = None
+    Args:
+        density: A 3D numpy array of shape (N, N, N) representing the density at each 
+                 gridpoint, where N is a multiple of 8.
+        ds: The distance between any two adjacent gridpoints.
 
-    def on_tick(self):
-        # Get the latest price
-        current_price = self._market_info.get_mid_price()
+    Returns:
+        A tuple containing three 3D numpy arrays of shape (N, N, N) representing gx, gy, and gz 
+        respectively.
+    """
+    N = density.shape[0]
+    gx = np.zeros_like(density, dtype=np.float32)
+    gy = np.zeros_like(density, dtype=np.float32)
+    gz = np.zeros_like(density, dtype=np.float32)
+    G = 6.67430e-11  # Gravitational constant
 
-        # Update moving averages
-        self._fast_ma.update(current_price)
-        self._slow_ma.update(current_price)
+    for i in range(N):
+        for j in range(N):
+            for k in range(N):
+                for ii in range(N):
+                    for jj in range(N):
+                        for kk in range(N):
+                            if (i, j, k) != (ii, jj, kk):
+                                dx = (ii - i) * ds
+                                dy = (jj - j) * ds
+                                dz = (kk - k) * ds
+                                dist_sq = dx**2 + dy**2 + dz**2
+                                dist = np.sqrt(dist_sq)
+                                force = G * density[i, j, k] * density[ii, jj, kk] / dist_sq
 
-        if self._fast_ma.ready() and self._slow_ma.ready():
-            # Check for crossover conditions
-            if self._fast_ma.avg > self._slow_ma.avg and self._last_trade_side != "BUY":
-                # Fast MA crosses above slow MA, buy signal
-                self.buy_with_specific_market(
-                    self._market_info,
-                    amount=0.01,  # Replace with your desired amount
-                    order_type=OrderType.MARKET
-                )
-                self._last_trade_side = "BUY"
+                                gx[i, j, k] += force * dx / dist
+                                gy[i, j, k] += force * dy / dist
+                                gz[i, j, k] += force * dz / dist
 
-            elif self._fast_ma.avg < self._slow_ma.avg and self._last_trade_side != "SELL":
-                # Fast MA crosses below slow MA, sell signal
-                self.sell_with_specific_market(
-                    self._market_info,
-                    amount=0.01,  # Replace with your desired amount
-                    order_type=OrderType.MARKET
-                )
-                self._last_trade_side = "SELL"
+    return gx, gy, gz
 
+def triton_python_model_repository(
+    model_config,
+    repository_path,
+    request_header,
+    request_body,
+):
+    """
+    Triton Python model that computes gx, gy, and gz for a given density grid.
 
-def start(self):
-    try:
-        # Connect to the exchange
-        exchange = PaperTradeExchange(exchange_name="binance")
-        exchange.connect()
+    Args:
+        model_config: The model configuration.
+        repository_path: The path to the model repository.
+        request_header: The request header.
+        request_body: The request body.
 
-        # Initialize the strategy
-        market_info = MarketTradingPairTuple(exchange, trading_pair, "BTC", "USDT")
-        strategy = CrossOverStrategy(market_info)
+    Returns:
+        A tuple containing the response header and response body.
+    """
+    input_tensors = pb_utils.get_input_tensors(request_body)
+    density = pb_utils.get_input_tensor_by_name(input_tensors, "density")
+    ds = pb_utils.get_input_tensor_by_name(input_tensors, "ds")
 
-        # Add the strategy to the bot
-        self.add_markets([exchange])
-        self.strategies.append(strategy)
+    if density is None:
+        raise pb_utils.InferenceServerException(
+            msg="Missing input tensor 'density'.",
+            status=pb_utils.TRITONSERVER_ERROR_INVALID_ARG,
+        )
+    if ds is None:
+        raise pb_utils.InferenceServerException(
+            msg="Missing input tensor 'ds'.",
+            status=pb_utils.TRITONSERVER_ERROR_INVALID_ARG,
+        )
 
-    except Exception as e:
-        self.logger().error(str(e), exc_info=True)
+    density = density.as_numpy()
+    ds = ds.as_numpy()
 
+    gx, gy, gz = _get_gx_gy_gz(density, ds)
 
-# This is how you would run the script in Hummingbot
-# start --script cross_over_strategy.py --config cross_over_strategy.yml
+    output_tensors = [
+        pb_utils.Tensor("gx", gx),
+        pb_utils.Tensor("gy", gy),
+        pb_utils.Tensor("gz", gz),
+    ]
+
+    inference_response = pb_utils.InferenceResponse(output_tensors=output_tensors)
+    return inference_response.http_body(), None
