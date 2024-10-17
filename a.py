@@ -1,28 +1,24 @@
-import os
-import zipfile
+import bluetooth
+import numpy as np
+import cv2
+# ... other imports
 
-def archive_selection(selection):
-    """
-    Creates a zip archive of the selected items with maximum compression.
-    """
+# Bluetooth connection setup
+server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+# ... (set up Bluetooth connection)
 
-    # Prompt for output file path
-    output_path = ask_user_for_path("Save Zip Archive", "archive.zip")
-    if not output_path:
-        return  # User canceled
+while True:
+    # Receive data from ESP32
+    data = server_sock.recv(1024) 
+    # ... (process data, unpack audio and environmental data)
 
-    # Create the zip archive
-    with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zip_file:
-        for item in selection:
-            if item.is_file:
-                zip_file.write(item.path, os.path.basename(item.path))
-            elif item.is_folder:
-                for root, _, files in os.walk(item.path):
-                    for file in files:
-                        zip_file.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), item.path))
+    # Create 3D array (adjust dimensions as needed)
+    audio_data = np.array([mic1_data, mic2_data, mic3_data]) 
 
-# Get the selected items
-selection = get_selected_items()
+    # Perform beamforming or other signal processing
+    # ... (use NumPy, SciPy, and potentially CUDA)
 
-# Execute the action
-archive_selection(selection)
+    # Generate heatmap
+    heatmap = cv2.applyColorMap(processed_data, cv2.COLORMAP_JET) 
+    cv2.imshow("Heatmap", heatmap)
+    cv2.waitKey(1) 

@@ -1,5 +1,25 @@
-Test case 1: The script should buy when the fast moving average (MA) crosses above the slow moving average (MA).  
-Test case 2: The script should sell when the fast moving average (MA) crosses below the slow moving average (MA).  
+Test case 1: ESP32 level system using bytewise integers.
+Test case 2: Code handling digital signal acquisition from 3 PDM microphones.
+Test case 3: Digital signal from microphones put into a matrix multiplication grid or 3D array.
+Test case 4: ESP32 sampling the Knowles MEMS microphones at 7Hz-36kHz with lowest latency under 0.5ms.
+Test case 5: Disable the ESP32 watchdog timer if needed to ensure uninterrupted sampling.
+Test case 6: Code that allows scaling to handle more than 127 microphones.
+Test case 7: ESP32 connects via MPI cluster WiFi to a second ESP32 for environmental data collection.
+Test case 8: The second ESP32 sends data via Bluetooth to a workstation running Windows 10.
+Test case 9: Workstation utilizes either Visual Studio or Python and appropriate libraries for heavy compute.
+Test case 10: Code uses CUDA kernels for sound data acquisition on the workstation.
+Test case 11: Beamforming test conducted with the system.
+Test case 12: Future system plan to support sonar or music-based high-frequency localization with a heatmap using OpenCV (cv2).
 
-Test case 1: Passed
-Test case 2: Passed
+Test case 1:  Failed
+Test case 2:  Failed
+Test case 3:  Failed
+Test case 4:  Failed
+Test case 5:  Failed
+Test case 6:  Failed
+Test case 7:  Failed
+Test case 8:  Failed
+Test case 9:  Failed
+Test case 10: Failed
+Test case 11: Failed
+Test case 12: Failed
