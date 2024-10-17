@@ -1,5 +1,10 @@
-Test case 1: The script should buy when the fast moving average (MA) crosses above the slow moving average (MA).  
-Test case 2: The script should sell when the fast moving average (MA) crosses below the slow moving average (MA).  
-
-Test case 1: Passed
-Test case 2: Passed
+Test case 1:  Failed
+Test case 2:  Failed
+Test case 3:  Failed
+Test case 4:  Failed
+Test case 5:  Failed
+Test case 6:  Failed
+Test case 7:  Failed
+Test case 8:  Failed
+Test case 9:  Failed
+Test case 10: Failed
