@@ -1,73 +1,28 @@
-from hummingbot.strategy.strategy_base import StrategyBase
-from hummingbot.strategy.market_trading_pair_tuple import MarketTradingPairTuple
-from hummingbot.connector.exchange.paper_trade import PaperTradeExchange
-from hummingbot.core.data_type.common import OrderType, TradeType
-from hummingbot.core.event.events import OrderFilledEvent
-from hummingbot.indicator.simple_moving_average import SimpleMovingAverage
+import os
+import zipfile
 
-# Global variables
-trading_pair = "BTC-USDT"
-exchange = "binance"
-fast_ma_period = 10
-slow_ma_period = 20
+def archive_selection(selection):
+    """
+    Creates a zip archive of the selected items with maximum compression.
+    """
 
-class CrossOverStrategy(StrategyBase):
-    def __init__(self,
-                 market_info: MarketTradingPairTuple,
-                 fast_ma_period: int = fast_ma_period,
-                 slow_ma_period: int = slow_ma_period):
-        super().__init__()
-        self._market_info = market_info
-        self._fast_ma = SimpleMovingAverage(fast_ma_period)
-        self._slow_ma = SimpleMovingAverage(slow_ma_period)
-        self._last_trade_side = None
+    # Prompt for output file path
+    output_path = ask_user_for_path("Save Zip Archive", "archive.zip")
+    if not output_path:
+        return  # User canceled
 
-    def on_tick(self):
-        # Get the latest price
-        current_price = self._market_info.get_mid_price()
+    # Create the zip archive
+    with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zip_file:
+        for item in selection:
+            if item.is_file:
+                zip_file.write(item.path, os.path.basename(item.path))
+            elif item.is_folder:
+                for root, _, files in os.walk(item.path):
+                    for file in files:
+                        zip_file.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), item.path))
 
-        # Update moving averages
-        self._fast_ma.update(current_price)
-        self._slow_ma.update(current_price)
+# Get the selected items
+selection = get_selected_items()
 
-        if self._fast_ma.ready() and self._slow_ma.ready():
-            # Check for crossover conditions
-            if self._fast_ma.avg > self._slow_ma.avg and self._last_trade_side != "BUY":
-                # Fast MA crosses above slow MA, buy signal
-                self.buy_with_specific_market(
-                    self._market_info,
-                    amount=0.01,  # Replace with your desired amount
-                    order_type=OrderType.MARKET
-                )
-                self._last_trade_side = "BUY"
-
-            elif self._fast_ma.avg < self._slow_ma.avg and self._last_trade_side != "SELL":
-                # Fast MA crosses below slow MA, sell signal
-                self.sell_with_specific_market(
-                    self._market_info,
-                    amount=0.01,  # Replace with your desired amount
-                    order_type=OrderType.MARKET
-                )
-                self._last_trade_side = "SELL"
-
-
-def start(self):
-    try:
-        # Connect to the exchange
-        exchange = PaperTradeExchange(exchange_name="binance")
-        exchange.connect()
-
-        # Initialize the strategy
-        market_info = MarketTradingPairTuple(exchange, trading_pair, "BTC", "USDT")
-        strategy = CrossOverStrategy(market_info)
-
-        # Add the strategy to the bot
-        self.add_markets([exchange])
-        self.strategies.append(strategy)
-
-    except Exception as e:
-        self.logger().error(str(e), exc_info=True)
-
-
-# This is how you would run the script in Hummingbot
-# start --script cross_over_strategy.py --config cross_over_strategy.yml
+# Execute the action
+archive_selection(selection)
