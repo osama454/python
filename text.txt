@@ -1,5 +1,12 @@
-Test case 1: The script should buy when the fast moving average (MA) crosses above the slow moving average (MA).  
-Test case 2: The script should sell when the fast moving average (MA) crosses below the slow moving average (MA).  
+Test case 1: The prompt asks for code to turn three brand new esp-wroom-32s into a 3-mic beamforming assembly using MicroPython.
+Test case 2: The code should include the usage of both MicroPython (for the ESP32) and normal Python (presumably for the workstation).
+Test case 3: Heavy computation is allowed on a 32-core, 128GB RAM, Nvidia 4090 workstation, which implies some computational delegation or division of work.
+Test case 4: The code should account for integrating the ESP32 modules into the overall beamforming process.
+Test case 5: The beamforming functionality should be implemented, and it must leverage the workstation's power for compute-intensive tasks.
 
-Test case 1: Passed
-Test case 2: Passed
+
+Test case 1: Failed
+Test case 2: Failed
+Test case 3: Failed
+Test case 4: Failed
+Test case 5: Failed
